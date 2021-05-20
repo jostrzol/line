@@ -1,0 +1,49 @@
+#!/usr/bin/bash
+
+cmd="./line test.bmp"
+out="test-out/test"
+ext=".bmp"
+
+startpnts="50 100"
+
+endpnts=(
+    "100 100"
+    "100 130"
+    "100 150"
+    "80 150"
+    "50 150"
+    "20 150"
+    "0 150"
+    "0 130"
+    "0 100"
+    "0 70"
+    "0 50"
+    "20 50"
+    "50 50"
+    "80 50"
+    "100 50"
+    "100 70"
+)
+
+for i in "${!endpnts[@]}"
+do
+    el=${endpnts[$i]}
+    cmd_i="$cmd ${out}-${i}${ext} $startpnts $el 255"
+    echo "Executing:    $cmd_i"
+    $cmd_i
+done
+
+last_i=$(($i+1))
+
+args=(
+    "23.45 65.34 112.46783 211.3235 127"
+)
+
+for i in "${!args[@]}"
+do
+    el=${args[$i]}
+    let i+=last_i
+    cmd_i="$cmd ${out}-${i}${ext} $el"
+    echo "Executing:    $cmd_i"
+    $cmd_i
+done

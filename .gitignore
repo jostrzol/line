@@ -1,0 +1,5 @@
+rand-test
+test-out
+*.o
+.vscode
+line
