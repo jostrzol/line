@@ -22,6 +22,7 @@ if __name__ == "__main__":
         cmd = (f"./line test.bmp {dir}test-{i}.bmp"
                f" {xs} {ys} {xe} {ye} {color}")
 
+        print(f"Executing\t{cmd}")
         system(cmd)
         log.write(cmd + "\n")
 

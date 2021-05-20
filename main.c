@@ -3,6 +3,7 @@
 #include <string.h>
 
 #define N_ARG 8
+#define BPP 8
 
 extern void line(void *img, unsigned int xs, unsigned int ys, unsigned int xe, unsigned int ye, unsigned int color);
 
@@ -23,11 +24,20 @@ int main(int argc, char *argv[])
         printf("Couldn't open file \"%s\" for reading\n", inFilename);
         return -1;
     }
+    unsigned short int bpp;
+    fseek(inFile, 28, SEEK_SET);
+    fread(&bpp, 2, 1, inFile);
+    if (bpp != BPP)
+    {
+        printf("Unhandled bpp: %d, expected %d", bpp, BPP);
+        return -1;
+    }
+
     unsigned int size;
     fseek(inFile, 2, SEEK_SET);
     fread(&size, 2, 1, inFile);
-    rewind(inFile);
 
+    rewind(inFile);
     void *buff = malloc(size);
     fread(buff, size, 1, inFile);
 

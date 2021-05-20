@@ -20,7 +20,7 @@ main.o: main.c
 	$(C) $(CFLAGS) main.c
 
 line.o: line.asm
-	$(A) $(AFLAGS) line.asm
+	$(ASM) $(ASMFLAGS) line.asm
 
 clean:
 	rm -rf $(OBJ) $(EXEC)

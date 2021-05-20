@@ -9,4 +9,5 @@ if __name__ == "__main__":
 
     with open(dir + "log.txt", "r") as log:
         for line in log:
+            print(f"Executing\t{line}", end="")
             system(line)

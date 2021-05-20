@@ -7,7 +7,7 @@
 %endmacro
 
 %macro	round	1
-	add	%1, 0x8000
+	lea	%1, [%1+0x8000]
 	intprt	%1
 %endmacro
 
@@ -18,7 +18,7 @@
 %macro	rfrcprt	1
 	frcprt	%1
 	neg	%1
-	add	%1, 0x10000
+	lea	%1, [%1+0x10000]
 %endmacro
 
 ;draw line endpoint at (x, y) and save xpx to x
@@ -30,25 +30,27 @@
 %macro	endpnt	2
 	;calculate xend
 	mov	ebx, %1		;ebx = x
+	mov	edi, ebx	;edi = x (for later)
 	round	ebx		;ebx = round(x) = xend = xpx
 	;calculate yend
 	mov	eax, ebx	;eax = xend
-	sub	eax, %1		;eax = xend - x
+	sub	eax, edi	;eax = xend - x
 	imul	dword[slope]	;edx:eax = slope * (xend - x)
 	shrd	eax, edx, 16	;shift result back to place
 	add	eax, %2		;eax = y + slope * (xend - x) = yend
 	;calculate xgap
-	mov	ecx, %1		;ecx = x
-	add	ecx, 0x8000	;ecx = x + 0.5
-	rfrcprt	ecx		;ecx = rfrcprt(x + 0.5) = xgap
+	mov	ecx, edi		;ecx = x
+	lea	ecx, [ecx+0x8000]	;ecx = x + 0.5
+	rfrcprt	ecx			;ecx = rfrcprt(x + 0.5) = xgap
 	;calculate ypx, xpx
-	mov	%1, ebx	;save ebx = xpx
+	mov	%1, ebx		;save ebx = xpx to x
 	mov	edx, eax	;edx = yend
 	intprt	edx		;edx = intprt(yend) = ypx
 	;calculate first bufpos
 	test	esi, esi	;if steep
+	mov	edi, ebx	;edi = xpx
 	cmovnz	ebx, edx	;xpx <-> ypx
-	cmovnz	edx, %1		;xpx <-> ypx
+	cmovnz	edx, edi	;xpx <-> ypx
 				;now edx = ycoord, ebx = xcoord
 	shr	ebx, 16		;shift xcoord to place
 	shr	edx, 16		;shift ycoord to place
@@ -85,7 +87,7 @@ line:
 ;	prologue
 	push	ebp
 	mov	ebp, esp
-	sub	esp, 128
+	sub	esp, 20
 	push	ebx
 	push	esi
 	push	edi
@@ -100,26 +102,26 @@ line:
 %define	steep	ebp-4
 %define	slope	ebp-8
 %define	canvas	ebp-12
-%define	width	ebp-16
-%define	height	ebp-20
-%define	stride	ebp-24
+%define	height	ebp-16
+%define	stride	ebp-20
 
 ;	body
 
 ;	read file metadata
 	mov	eax, [bmp]
 	
+	;read canvas pointer
 	mov	ebx, [eax+10]
 	add	ebx, [bmp]
 	mov	[canvas], ebx
 
-	mov	ebx, [eax+18]
-	mov	[width], ebx
 	;calculate stride
+	mov	ebx, [eax+18]
 	add	ebx, 3
 	and	ebx, ~3
 	mov	[stride], ebx
 
+	;read height
 	mov	ebx, [eax+22]
 	mov	[height], ebx
 
@@ -142,34 +144,32 @@ line:
 	cmovg	esi, ecx	;esi = steep
 	mov	[steep], esi
 
-;	interpret endpoints
+;	swap endpoints if needed
+	;load coords
+	mov	eax, [x0]
+	mov	ebx, [y0]
+	mov	ecx, [x1]
+	mov	edx, [y1]
+
 	;if steep:	x <-> y
 	jng	no_steep
-	mov	eax, [x0]	;x0 <-> y0
-	mov	ebx, [y0]
-	mov	[x0], ebx
-	mov	[y0], eax
-	mov	eax, [x1]	;x1 <-> y1
-	mov	ebx, [y1]
-	mov	[x1], ebx
-	mov	[y1], eax
+	xchg	eax, ebx	;x0 <-> y0
+	xchg	ecx, edx	;x1 <-> y1
 	;endif
 no_steep:
 
-	mov	eax, [x0]	
-	mov	ebx, [x1]
-	cmp	eax, ebx
-
+	cmp	eax, ecx
 	;if x0>x1:	_0 <-> _1
 	jng	x0gx1
-	mov	[x0], ebx	;x0 <-> x1
-	mov	[x1], eax
-	mov	eax, [y0]	;y0 <-> y1
-	mov	ebx, [y1]
-	mov	[y0], ebx
-	mov	[y1], eax
+	xchg	eax, ecx	;x0 <-> x1
+	xchg	ebx, edx	;y0 <-> y1
 	;endif
 x0gx1:
+	;save coords
+	mov	[x0], eax
+	mov	[y0], ebx
+	mov	[x1], ecx
+	mov	[y1], edx
 
 ;	calculate slope
 	mov	edx, [y1]
@@ -203,7 +203,7 @@ after_div:
 	neg	edx
 	test	ecx, ecx
 	cmovnz	eax, edx
-	;correct slope: if dx = 0 => slope = 1
+	;correct slope: if dx == 0 => slope = 1
 	test	ebx, ebx
 	mov	edx, 0x10000
 	cmovz	eax, edx
@@ -212,7 +212,7 @@ after_div:
 
 ;	handle first endpoint
 	endpnt	[x0], [y0]
-	;eax = yend
+	;now eax = yend
 
 	;calculate first y for main loop
 	add	eax, [slope]
@@ -226,6 +226,10 @@ after_div:
 	add	eax, 0x10000	;eax++
 	mov	ebx, [y0]	;ebx = y
 	test	esi, esi	;if steep
+
+	mov	esi, [stride]	;load [stride] for faster access
+	mov	edi, [color]	;load [color] for faster access
+
 	jnz	steep_loop
 loop:
 	;calculate first bufpos
@@ -236,23 +240,23 @@ loop:
 	shr	edx, 16		;shift xpx to place
 	shr	ecx, 16		;shift ypx to place
 
-	imul	ecx, [stride]	;ecx = ypx * [strice]		:move ypx pixels "up"
-	add	ecx, edx	;ecx = ypx * [strice] + xpx	:move xpx pixels "right"
+	imul	ecx, esi	;ecx = ypx * [stride]		:move ypx pixels "up"
+	add	ecx, edx	;ecx = ypx * [stride] + xpx	:move xpx pixels "right"
 
 	add	ecx, [canvas]	;ecx = bufpos			:make bufpos absolute
 	;calculate first color
 	mov	edx, ebx	;edx = y
 	rfrcprt	edx		;edx = rfrcprt(y)
-	imul	edx, [color]	;edx = rfrcprt(y) * [color]
+	imul	edx, edi	;edx = rfrcprt(y) * [color]
 	round	edx		;edx = round(rfrcprt(y) * [color])
 	shr	edx, 16		;edx = round(rfrcprt(y) * [color]) >> 16 = firstcolor
 	;paint first pixel
 	mov	[ecx], dl
 	;calculate second bufpos
-	add	ecx, [stride]	;ecx = old_bufpos + [stride] = bufpos	:move 1px "up"
+	add	ecx, esi	;ecx = old_bufpos + [stride] = bufpos	:move 1px "up"
 	;calculate second color
 	neg	edx		;edx = -firstcolor
-	add	edx, [color]	;edx = [color] - firstcolor = secondcolor
+	add	edx, edi	;edx = [color] - firstcolor = secondcolor
 	;paint second pixel
 	mov	[ecx], dl
 
@@ -273,14 +277,14 @@ steep_loop:
 	shr	ecx, 16		;shift xpx to place
 	shr	edx, 16		;shift ypx to place
 
-	imul	ecx, [stride]	;ecx = xpx * [stride]		:move xpx pixels "up"
+	imul	ecx, esi	;ecx = xpx * [stride]		:move xpx pixels "up"
 	add	ecx, edx	;ecx = xpx * [stride] + ypx	:move ypx pixels "right"
 
 	add	ecx, [canvas]	;ecx = bufpos			:make bufpos absolute
 	;calculate first color
 	mov	edx, ebx	;edx = y
 	rfrcprt	edx		;edx = rfrcprt(y)
-	imul	edx, [color]	;edx = rfrcprt(y) * [color]
+	imul	edx, edi	;edx = rfrcprt(y) * [color]
 	round	edx		;edx = round(rfrcprt(y) * [color])
 	shr	edx, 16		;edx = round(rfrcprt(y) * [color]) >> 16 = firstcolor
 	;paint first pixel
@@ -289,7 +293,7 @@ steep_loop:
 	inc	ecx		;ecx = old_bufpos + 1 = bufpos	:move 1px "right"
 	;calculate second color
 	neg	edx		;edx = -firstcolor
-	add	edx, [color]	;edx = [color] - firstcolor = secondcolor
+	add	edx, edi	;edx = [color] - firstcolor = secondcolor
 	;paint second pixel
 	mov	[ecx], dl
 
