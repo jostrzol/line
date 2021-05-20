@@ -33,12 +33,14 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    //read size
     unsigned int size;
     fseek(inFile, 2, SEEK_SET);
-    fread(&size, 2, 1, inFile);
+    fread(&size, 4, 1, inFile);
 
-    rewind(inFile);
+    //allocate size
     void *buff = malloc(size);
+    rewind(inFile);
     fread(buff, size, 1, inFile);
 
     fclose(inFile);
