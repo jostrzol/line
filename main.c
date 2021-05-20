@@ -23,8 +23,9 @@ int main(int argc, char *argv[])
         printf("Couldn't open file \"%s\" for reading\n", inFilename);
         return -1;
     }
-    fseek(inFile, 0, SEEK_END);
-    size_t size = ftell(inFile);
+    unsigned int size;
+    fseek(inFile, 2, SEEK_SET);
+    fread(&size, 2, 1, inFile);
     rewind(inFile);
 
     void *buff = malloc(size);
