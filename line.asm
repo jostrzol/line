@@ -41,7 +41,7 @@
 	add	eax, %2		;eax = y + slope * (xend - x) = yend
 	;calculate xgap
 	lea	ecx, [edi+0x8000]	;ecx = x + 0.5
-	%3	ecx			;ecx = rfrcprt(x + 0.5) = xgap
+	%3	ecx			;ecx = (r)frcprt(x + 0.5) = xgap
 	;calculate ypx, xpx
 	mov	%1, ebx		;save ebx = xpx to x
 	mov	edx, eax	;edx = yend
