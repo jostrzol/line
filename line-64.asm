@@ -23,8 +23,8 @@
 
 ;draw line endpoint at (x, y) and save xpx to x
 ;arguments:
-;1 - x
-;2 - y
+;1 - x (in register)
+;2 - y (in register)
 ;3 - rfrcprt for x0, frcprt for x1
 %macro	endpnt	3
 	;calculate xend
@@ -35,7 +35,7 @@
 	sub	rax, rbx	;rax = xend - x
 	imul	r11		;edx:eax = slope * (xend - x)
 	shrd	eax, edx, 16	;shift result back to place
-	add	%2, rax		;y <- y + slope * (xend - x) = yend
+	lea	%2, [%2+rax]	;y <- y + slope * (xend - x) = yend
 	;calculate xgap
 	lea	rcx, [rbx+0x8000]	;rcx = x + 0.5
 	%3	rcx			;rcx = (r)frcprt(x + 0.5) = xgap
@@ -163,17 +163,25 @@ no_steep:
 x0gx1:
 
 ;	calculate slope
+	;prepare rdx options
+	xor	rdx, rdx	;rdx = 0 when dy >= 0
+	mov	rbx, -1		;rbx = 0xFFFF...FFFF when dy < 0
+
+	;calculate dx and dy
 	mov	rax, r8		;rax = y1
 	sub	rax, r14	;rax = y1 - y0 = dy
 	mov	rcx, r15	;rcx = x1
 	sub	rcx, rsi	;rcx = x1 - x0 = dx
 
-	shl	rax, 32		;move left so that division result matches 16.16 format
+	shl	rax, 32		;move left for the correct precision
 
-	xor	rdx, rdx
-rex.w	idiv	rcx		;rax = dy/dx = slope
+	;fill rdx with sign of rax
+	cmovs	rdx, rbx	;if signed rdx = 0xFFFF...FFFF
+
+	;divide
+	idiv	rcx		;rax = dy/dx = slope
 	;shift slope to place
-	shr	rax, 16
+	sar	rax, 16
 	;correct slope: if dx == 0 => slope = 1
 	test	rcx, rcx
 	mov	rdx, 0x10000
@@ -181,12 +189,12 @@ rex.w	idiv	rcx		;rax = dy/dx = slope
 	;save slope
 	mov	r11, rax
 
+
 ;	handle first endpoint
 	endpnt	rsi, r14, rfrcprt
 
 ;	handle second endpoint
 	endpnt	r15, r8, frcprt
-
 
 ;	main loop (for x from xpx0+1 to xpx1-1)
 	lea	rsi, [rsi+0x10000]	;rsi++
