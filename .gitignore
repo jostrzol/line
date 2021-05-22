@@ -3,4 +3,5 @@ test-out
 *.o
 .vscode
 line
+line-64
 test-*.bmp
