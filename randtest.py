@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 from os import system
+import sys
 from random import random, randint
 
 if __name__ == "__main__":
@@ -7,6 +8,11 @@ if __name__ == "__main__":
     height = 213
 
     dir = "rand-test/"
+
+    if len(sys.argv) > 1 and sys.argv[1] == "64":
+        program = "./line-64"
+    else:
+        program = "./line"
 
     log = open(dir + "log.txt", "w")
 
@@ -19,7 +25,7 @@ if __name__ == "__main__":
 
         color = randint(0, 255)
 
-        cmd = (f"./line test.bmp {dir}test-{i}.bmp"
+        cmd = (f"{program} test.bmp {dir}test-{i}.bmp"
                f" {xs} {ys} {xe} {ye} {color}")
 
         print(f"Executing\t{cmd}")

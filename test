@@ -1,6 +1,12 @@
 #!/usr/bin/bash
 
-cmd="./line test.bmp"
+program="./line"
+if [ $# -ne 0 ] && [ $1 -eq 64 ]
+then
+    program="./line-64"
+fi
+
+cmd="$program test.bmp"
 out="test-out/test"
 ext=".bmp"
 
@@ -34,16 +40,3 @@ do
 done
 
 last_i=$(($i+1))
-
-args=(
-    "23.45 65.34 112.46783 211.3235 127"
-)
-
-for i in "${!args[@]}"
-do
-    el=${args[$i]}
-    let i+=last_i
-    cmd_i="$cmd ${out}-${i}${ext} $el"
-    echo "Executing:    $cmd_i"
-    $cmd_i
-done
