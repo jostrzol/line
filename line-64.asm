@@ -26,35 +26,34 @@
 ;1 - x
 ;2 - y
 ;3 - rfrcprt for x0, frcprt for x1
-;r13 - steep
 %macro	endpnt	3
 	;calculate xend
-	mov	r10, %1		;r10 = x (for later)
+	mov	rbx, %1		;rbx = x (for later)
 	round	%1		;x <- round(x) = xend = xpx
 	;calculate yend
 	mov	rax, %1		;rax = xend
-	sub	rax, r10	;rax = xend - x
+	sub	rax, rbx	;rax = xend - x
 	imul	r11		;edx:eax = slope * (xend - x)
 	shrd	eax, edx, 16	;shift result back to place
 	add	%2, rax		;y <- y + slope * (xend - x) = yend
 	;calculate xgap
-	lea	rcx, [r10+0x8000]	;rcx = x + 0.5
+	lea	rcx, [rbx+0x8000]	;rcx = x + 0.5
 	%3	rcx			;rcx = (r)frcprt(x + 0.5) = xgap
 	;calculate ypx, xpx
 	mov	rdx, %2		;rdx = yend
 	intprt	rdx		;rdx = intprt(yend) = ypx
-	mov	r10, %1		;r10 = xpx
+	mov	rbx, %1		;rbx = xpx
 	;calculate first bufpos
 	test	r13, r13	;if steep
-	mov	rax, r10	;rax = xpx
-	cmovnz	r10, rdx	;xpx <-> ypx
+	mov	rax, rbx	;rax = xpx
+	cmovnz	rbx, rdx	;xpx <-> ypx
 	cmovnz	rdx, rax	;xpx <-> ypx
-				;now rdx = ycoord, r10 = xcoord
-	shr	r10, 16		;shift xcoord to place
+				;now rdx = ycoord, rbx = xcoord
+	shr	rbx, 16		;shift xcoord to place
 	shr	rdx, 16		;shift ycoord to place
 
 	imul	rdx, r12	;rdx = ycoord * [stride]		:move ycoord pixels "up"
-	lea	rdx, [rdx+r10]	;rdx = ycoord * [stride] + xpx	:move xcoord pixels "right"
+	lea	rdx, [rdx+rbx]	;rdx = ycoord * [stride] + xpx	:move xcoord pixels "right"
 
 	lea	rdx, [rdx+rdi]	;rdx += canvas			:make bufpos absolute
 	;calculate the base color for this endpoint (will be used like color in main loop)
@@ -70,13 +69,13 @@
 	;paint first pixel
 	mov	[rdx], bl
 	;calculate second bufpos
-	mov	r10, rdx	;r10 = rdx = old_bufpos
+	mov	rax, rdx	;rax = rdx = old_bufpos
 	lea	rdx, [rdx+r12]	;rdx = old_bufpos + [stride], which is old_bufpos moved "up" by 1px
-	inc	r10		;r10 = old_bufpos + 1, which is old_bufpos moved "right" by 1px
-	test	r13, r13	;if steep => rdx <- r10
-	cmovnz	rdx, r10	;rdx = bufpos
+	inc	rax		;rax = old_bufpos + 1, which is old_bufpos moved "right" by 1px
+	test	r13, r13	;if steep => rdx <- rax
+	cmovnz	rdx, rax	;rdx = bufpos
 	;check if out of bounds
-	cmp	rdx, [fend]
+	cmp	rdx, r10
 	jae	%%end
 	;calculate second color
 	sub	rcx, rbx	;rcx = basecolor - firstcolor = secondcolor
@@ -89,7 +88,6 @@ line:
 ;	prologue
 	push	rbp
 	mov	rbp, rsp
-	sub	rsp, 128
 	push	r12
 	push	r13
 	push	r14
@@ -103,7 +101,7 @@ line:
 ;r8:		y1
 ;r9:		color	
 
-%define	fend	rbp-8
+;r10:		fend
 ;r11:		slope
 ;r12:		stride
 ;r13:		steep
@@ -119,8 +117,7 @@ line:
 
 	;read size and calculate fend
 	mov	ebx, [rdi+2]	;rbx = fsize
-	lea	rbx, [rdi+rbx]	;rbx = bmp + fsize = fend
-	mov	[fend], rbx
+	lea	r10, [rdi+rbx]	;r10 = bmp + fsize = fend
 
 	;add offset to bmp, now becomes canvas
 	mov	ebx, [rdi+10]	;ebx = offset
@@ -221,7 +218,7 @@ loop:
 	;calculate second bufpos
 	lea	rcx, [rcx+r12]	;rcx = old_bufpos + [stride] = bufpos	:move 1px "up"
 	;check if out of bounds
-	cmp	rcx, [fend]
+	cmp	rcx, r10
 	jae	dont_paint
 	;calculate second color
 	neg	rdx		;rdx = -firstcolor
@@ -261,7 +258,7 @@ steep_loop:
 	;calculate second bufpos
 	inc	rcx		;rcx = old_bufpos + 1 = bufpos	:move 1px "right"
 	;check if out of bounds
-	cmp	rcx, [fend]
+	cmp	rcx, r10
 	jae	dont_paint_steep
 	;calculate second color
 	neg	rdx		;rdx = -firstcolor
@@ -283,6 +280,5 @@ end:
 	pop	r14
 	pop	r13
 	pop	r12
-	mov	rsp, rbp
 	pop	rbp
 	ret
