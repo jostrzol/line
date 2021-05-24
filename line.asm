@@ -200,11 +200,14 @@ x0gx1:
 	endpnt	[x1], [y1], frcprt
 
 ;	main loop (for x from xpx0+1 to xpx1-1)
-	mov	eax, [x0]		;eax = x
-	lea	eax, [eax+0x10000]	;eax++
-	mov	ebx, [y0]		;ebx = y
-	add	ebx, [slope]		;move y to next intersection
-	test	esi, esi		;if steep
+	mov	eax, [x0]	;eax = x
+	shr	eax, 16		;shift x to be regular int
+	inc	eax		;eax++
+	shr	dword[x1], 16	;shift xpx1 to be regular int because must be in same format as x
+
+	mov	ebx, [y0]	;ebx = y
+	add	ebx, [slope]	;move y to next intersection
+	test	esi, esi	;if steep
 
 	mov	esi, [stride]	;load [stride] for faster access
 	mov	edi, [color]	;load [color] for faster access
@@ -214,13 +217,10 @@ loop:
 	;calculate first bufpos
 	mov	ecx, ebx	;ecx = y
 	intprt	ecx		;ecx = intprt(y) = ypx
-	mov	edx, eax	;edx = x = xpx
-
-	shr	edx, 16		;shift xpx to place
 	shr	ecx, 16		;shift ypx to place
 
 	imul	ecx, esi	;ecx = ypx * [stride]		:move ypx pixels "up"
-	lea	ecx, [ecx+edx]	;ecx = ypx * [stride] + xpx	:move xpx pixels "right"
+	lea	ecx, [ecx+eax]	;ecx = ypx * [stride] + xpx	:move xpx pixels "right"
 
 	add	ecx, [canvas]	;ecx = bufpos			:make bufpos absolute
 	;calculate first color
@@ -243,10 +243,10 @@ loop:
 	mov	[ecx], dl
 dont_paint:
 	;move to next intersection
-	add	ebx, [slope]		;y += [slope]
+	add	ebx, [slope]	;y += [slope]
 
-	lea	eax, [eax+0x10000]	;x++
-	cmp	eax, [x1]		;do until x < x1
+	inc	eax		;x++
+	cmp	eax, [x1]	;do until x < x1
 	jne	loop
 	jmp	end
 
@@ -254,10 +254,9 @@ steep_loop:
 	;calculate first bufpos
 	mov	edx, ebx	;edx = y
 	intprt	edx		;edx = intprt(y) = ypx
-	mov	ecx, eax	;ecx = x = xpx
-
-	shr	ecx, 16		;shift xpx to place
 	shr	edx, 16		;shift ypx to place
+
+	mov	ecx, eax	;ecx = x = xpx
 
 	imul	ecx, esi	;ecx = xpx * [stride]		:move xpx pixels "up"
 	lea	ecx, [ecx+edx]	;ecx = xpx * [stride] + ypx	:move ypx pixels "right"
@@ -283,10 +282,10 @@ steep_loop:
 	mov	[ecx], dl
 dont_paint_steep:
 	;move to next intersection
-	add	ebx, [slope]		;y += [slope]
+	add	ebx, [slope]	;y += [slope]
 
-	lea	eax, [eax+0x10000]	;x++
-	cmp	eax, [x1]		;do until x < x1
+	inc	eax		;x++
+	cmp	eax, [x1]	;do until x < x1
 	jne	steep_loop
 
 end:
