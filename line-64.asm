@@ -173,22 +173,18 @@ x0gx1:
 	mov	rcx, r15	;rcx = x1
 	sub	rcx, rsi	;rcx = x1 - x0 = dx
 
-	shl	rax, 32		;move left for the correct precision
+	shl	rax, 16		;move dy left for the correct precision after division
 
 	;fill rdx with sign of rax
 	cmovs	rdx, rbx	;if signed rdx = 0xFFFF...FFFF
-
 	;divide
 	idiv	rcx		;rax = dy/dx = slope
-	;shift slope to place
-	sar	rax, 16
 	;correct slope: if dx == 0 => slope = 1
 	test	rcx, rcx
 	mov	rdx, 0x10000
 	cmovz	rax, rdx
 	;save slope
 	mov	r11, rax
-
 
 ;	handle first endpoint
 	endpnt	rsi, r14, rfrcprt

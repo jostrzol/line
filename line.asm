@@ -177,33 +177,12 @@ x0gx1:
 ;	calculate slope
 	sub	edx, ebx	;edx = y1 - y0 = dy
 	sub	ecx, eax	;ecx = x1 - x0 = dx
-
-	;the division will be performed on unsigned values
-	;only dy can be negative, so if it is - negate it
-	;and remember that it was negative for later
-	xor	ebx, ebx	;ebx = 0
-	mov	edi, 1		;edi = 1
-	mov	eax, edx
-	neg	eax		;eax = -edx
-	cmovns	edx, eax	;if negative => edx <- eax
-	cmovns	ebx, edi	;and ebx = 1
-	;the most dy/dx can be here is one due to the swaps before.
-	;if it is one, there will be floating point error, so handle this
-	;situation separately
-	cmp	edx, ecx
-	mov	eax, 0x10000
-	je	after_div
-	;divide
+	;shift dy so that slope will be in 16.16 format right after division
 	xor	eax, eax
-	div	ecx		;eax = dy/dx
-	;shift slope to place
-	shr	eax, 16
-after_div:
-	;negate back if division result should be negative
-	mov	edx, eax
-	neg	edx
-	test	ebx, ebx
-	cmovnz	eax, edx
+	shrd	eax, edx, 16
+	sar	edx, 16
+	;divide
+	idiv	ecx		;eax = dy/dx
 	;correct slope: if dx == 0 => slope = 1
 	test	ecx, ecx
 	mov	edx, 0x10000
