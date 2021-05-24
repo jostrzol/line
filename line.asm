@@ -183,10 +183,6 @@ x0gx1:
 	sar	edx, 16
 	;divide
 	idiv	ecx		;eax = dy/dx
-	;correct slope: if dx == 0 => slope = 1
-	test	ecx, ecx
-	mov	edx, 0x10000
-	cmovz	eax, edx
 	;save slope
 	mov	[slope], eax
 

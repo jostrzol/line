@@ -179,10 +179,6 @@ x0gx1:
 	cmovs	rdx, rbx	;if signed rdx = 0xFFFF...FFFF
 	;divide
 	idiv	rcx		;rax = dy/dx = slope
-	;correct slope: if dx == 0 => slope = 1
-	test	rcx, rcx
-	mov	rdx, 0x10000
-	cmovz	rax, rdx
 	;save slope
 	mov	r11, rax
 
