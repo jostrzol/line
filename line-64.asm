@@ -193,22 +193,22 @@ x0gx1:
 	endpnt	r15, r8, frcprt
 
 ;	main loop (for x from xpx0+1 to xpx1-1)
-	lea	rsi, [rsi+0x10000]	;rsi++
-	lea	r14, [r14+r11]		;move y to next intersection
+	shr	rsi, 16		;shift x to be regular int
+	shr	r15, 16		;shift xpx1 to be regular int
 
-	test	r13, r13		;if steep
+	inc	rsi		;x++
+	lea	r14, [r14+r11]	;move y to next intersection
+
+	test	r13, r13	;if steep
 	jnz	steep_loop
 loop:
 	;calculate first bufpos
 	mov	rcx, r14	;rcx = y
 	intprt	rcx		;rcx = intprt(y) = ypx
-	mov	rdx, rsi	;rdx = x = xpx
-
-	shr	rdx, 16		;shift xpx to place
 	shr	rcx, 16		;shift ypx to place
 
 	imul	rcx, r12	;rcx = ypx * [stride]		:move ypx pixels "up"
-	lea	rcx, [rcx+rdx]	;rcx = ypx * [stride] + xpx	:move xpx pixels "right"
+	lea	rcx, [rcx+rsi]	;rcx = ypx * [stride] + xpx	:move xpx pixels "right"
 
 	lea	rcx, [rcx+rdi]	;rcx = bufpos			:make bufpos absolute
 	;calculate first color
@@ -231,10 +231,10 @@ loop:
 	mov	[rcx], dl
 dont_paint:
 	;move to next intersection
-	lea	r14, [r14+r11]		;y += [slope]
+	lea	r14, [r14+r11]	;y += [slope]
 
-	lea	rsi, [rsi+0x10000]	;x++
-	cmp	rsi, r15		;do until x < x1
+	inc	rsi		;x++
+	cmp	rsi, r15	;do until x < x1
 	jne	loop
 	jmp	end
 
@@ -242,10 +242,9 @@ steep_loop:
 	;calculate first bufpos
 	mov	rdx, r14	;rdx = y
 	intprt	rdx		;rdx = intprt(y) = ypx
-	mov	rcx, rsi	;rcx = x = xpx
-
-	shr	rcx, 16		;shift xpx to place
 	shr	rdx, 16		;shift ypx to place
+
+	mov	rcx, rsi	;rcx = x = xpx
 
 	imul	rcx, r12	;rcx = xpx * [stride]		:move xpx pixels "up"
 	lea	rcx, [rcx+rdx]	;rcx = xpx * [stride] + ypx	:move ypx pixels "right"
@@ -271,10 +270,10 @@ steep_loop:
 	mov	[rcx], dl
 dont_paint_steep:
 	;move to next intersection
-	lea	r14, [r14+r11]		;y += [slope]
+	lea	r14, [r14+r11]	;y += [slope]
 
-	lea	rsi, [rsi+0x10000]	;x++
-	cmp	rsi, r15		;do until x < x1
+	inc	rsi		;x++
+	cmp	rsi, r15	;do until x < x1
 	jne	steep_loop
 
 end:
