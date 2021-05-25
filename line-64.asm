@@ -192,12 +192,17 @@ x0gx1:
 	shr	rsi, 16		;shift x to be regular int
 	shr	r15, 16		;shift xpx1 to be regular int
 
-	inc	rsi		;x++
-	lea	r14, [r14+r11]	;move y to next intersection
-
 	test	r13, r13	;if steep
 	jnz	steep_loop
 loop:
+	;move to next point
+	inc	rsi		;x++
+	lea	r14, [r14+r11]	;move y to next intersection
+
+	;do until x < x1
+	cmp	rsi, r15	
+	jae	end
+
 	;calculate first bufpos
 	mov	rcx, r14	;rcx = y
 	intprt	rcx		;rcx = intprt(y) = ypx
@@ -219,22 +224,24 @@ loop:
 	lea	rcx, [rcx+r12]	;rcx = old_bufpos + [stride] = bufpos	:move 1px "up"
 	;check if out of bounds
 	cmp	rcx, r10
-	jae	dont_paint
+	jae	loop
 	;calculate second color
 	neg	rdx		;rdx = -firstcolor
 	lea	rdx, [rdx+r9]	;rdx = [color] - firstcolor = secondcolor
 	;paint second pixel
 	mov	[rcx], dl
-dont_paint:
-	;move to next intersection
-	lea	r14, [r14+r11]	;y += [slope]
 
-	inc	rsi		;x++
-	cmp	rsi, r15	;do until x < x1
-	jne	loop
-	jmp	end
+	jmp	loop
 
 steep_loop:
+	;move to next point
+	inc	rsi		;x++
+	lea	r14, [r14+r11]	;move y to next intersection
+
+	;do until x < x1
+	cmp	rsi, r15
+	jae	end
+
 	;calculate first bufpos
 	mov	rdx, r14	;rdx = y
 	intprt	rdx		;rdx = intprt(y) = ypx
@@ -258,19 +265,14 @@ steep_loop:
 	inc	rcx		;rcx = old_bufpos + 1 = bufpos	:move 1px "right"
 	;check if out of bounds
 	cmp	rcx, r10
-	jae	dont_paint_steep
+	jae	steep_loop
 	;calculate second color
 	neg	rdx		;rdx = -firstcolor
 	lea	rdx, [rdx+r9]	;rdx = [color] - firstcolor = secondcolor
 	;paint second pixel
 	mov	[rcx], dl
-dont_paint_steep:
-	;move to next intersection
-	lea	r14, [r14+r11]	;y += [slope]
 
-	inc	rsi		;x++
-	cmp	rsi, r15	;do until x < x1
-	jne	steep_loop
+	jmp	steep_loop
 
 end:
 ;	epilogue
