@@ -198,11 +198,10 @@ x0gx1:
 ;	main loop (for x from xpx0+1 to xpx1-1)
 	mov	eax, [x0]	;eax = x
 	shr	eax, 16		;shift x to be regular int
-	inc	eax		;eax++
 	shr	dword[x1], 16	;shift xpx1 to be regular int because must be in same format as x
 
 	mov	ebx, [y0]	;ebx = y
-	add	ebx, [slope]	;move y to next intersection
+
 	test	esi, esi	;if steep
 
 	mov	esi, [stride]	;load [stride] for faster access
@@ -210,6 +209,14 @@ x0gx1:
 
 	jnz	steep_loop
 loop:
+	;move to next point
+	inc	eax		;x++
+	add	ebx, [slope]	;move y to next intersection
+
+	;do until x < x1
+	cmp	eax, [x1]	
+	jae	end
+
 	;calculate first bufpos
 	mov	ecx, ebx	;ecx = y
 	intprt	ecx		;ecx = intprt(y) = ypx
@@ -231,22 +238,23 @@ loop:
 	lea	ecx, [ecx+esi]	;ecx = old_bufpos + [stride] = bufpos	:move 1px "up"
 	;check if out of bounds
 	cmp	ecx, [fend]
-	jae	dont_paint
+	jae	loop
 	;calculate second color
 	neg	edx		;edx = -firstcolor
 	lea	edx, [edx+edi]	;edx = [color] - firstcolor = secondcolor
 	;paint second pixel
 	mov	[ecx], dl
-dont_paint:
-	;move to next intersection
-	add	ebx, [slope]	;y += [slope]
-
-	inc	eax		;x++
-	cmp	eax, [x1]	;do until x < x1
-	jne	loop
-	jmp	end
+	jmp	loop
 
 steep_loop:
+	;move to next point
+	inc	eax		;x++
+	add	ebx, [slope]	;move y to next intersection
+
+	;do until x < x1
+	cmp	eax, [x1]	
+	jae	end
+
 	;calculate first bufpos
 	mov	edx, ebx	;edx = y
 	intprt	edx		;edx = intprt(y) = ypx
@@ -270,19 +278,14 @@ steep_loop:
 	inc	ecx		;ecx = old_bufpos + 1 = bufpos	:move 1px "right"
 	;check if out of bounds
 	cmp	ecx, [fend]
-	jae	dont_paint_steep
+	jae	steep_loop
 	;calculate second color
 	neg	edx		;edx = -firstcolor
 	lea	edx, [edx+edi]	;edx = [color] - firstcolor = secondcolor
 	;paint second pixel
 	mov	[ecx], dl
-dont_paint_steep:
-	;move to next intersection
-	add	ebx, [slope]	;y += [slope]
 
-	inc	eax		;x++
-	cmp	eax, [x1]	;do until x < x1
-	jne	steep_loop
+	jmp	steep_loop
 
 end:
 ;	epilogue
